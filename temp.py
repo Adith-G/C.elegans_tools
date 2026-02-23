@@ -14,6 +14,10 @@ import pandas as pd
 video_path = input("Enter video path: ").strip().strip('"')
 sample_every = 2   # seconds between samples
 
+# Output filenames (saved in same folder as script)
+csv_filename = "temperature_data.csv"
+plot_filename = "temperature_plot.png"
+
 # =============================
 # INIT
 # =============================
@@ -27,7 +31,7 @@ duration = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) / fps)
 temps = []
 times = []
 
-print("Processing with simple EasyOCR...")
+print("Processing with EasyOCR...")
 
 # =============================
 # MAIN LOOP
@@ -75,27 +79,38 @@ if len(temps) == 0:
     print("No valid temperatures detected.")
     exit()
 
-df = pd.DataFrame({"time": times, "temp": temps})
-df = df.set_index("time")
+df = pd.DataFrame({"Time (s)": times, "Temperature (°C)": temps})
+df = df.set_index("Time (s)")
 
 # Fill missing timestamps
 full_index = range(0, duration, sample_every)
 df = df.reindex(full_index)
 
 # Interpolate missing values
-df["temp"] = df["temp"].interpolate()
+df["Temperature (°C)"] = df["Temperature (°C)"].interpolate()
 
-# Smooth curve (removes OCR spikes)
-df["temp"] = df["temp"].rolling(3, center=True).mean()
+# Smooth curve
+df["Temperature (°C)"] = df["Temperature (°C)"].rolling(3, center=True).mean()
 
 # =============================
-# PLOT
+# SAVE CSV
+# =============================
+
+df.to_csv(csv_filename)
+print(f"\nCSV saved as: {csv_filename}")
+
+# =============================
+# SAVE PLOT
 # =============================
 
 plt.figure(figsize=(8,5))
-plt.plot(df.index, df["temp"])
+plt.plot(df.index, df["Temperature (°C)"])
 plt.xlabel("Time (seconds)")
 plt.ylabel("Temperature (°C)")
 plt.title("Temperature vs Time")
 plt.grid(True)
+
+plt.savefig(plot_filename, dpi=300)
+print(f"Plot saved as: {plot_filename}")
+
 plt.show()
